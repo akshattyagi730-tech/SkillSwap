@@ -40,10 +40,15 @@ const AuthPage = ({ signup: isSignupProp = false }) => {
       const { data } = await API.post(endpoint, payload);
 
       if (isSignup) {
-        // Show OTP verification step
         setPendingUser(data.user);
         setPendingToken(data.token);
-        setStep('otp');
+        if (data.otpSent === false) {
+          // Email failed — skip OTP, go to dashboard directly
+          login(data.user, data.token);
+          navigate('/dashboard');
+        } else {
+          setStep('otp');
+        }
       } else {
         login(data.user, data.token);
         navigate('/dashboard');

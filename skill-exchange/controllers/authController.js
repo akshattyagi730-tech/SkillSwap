@@ -32,18 +32,24 @@ const signup = async (req, res, next) => {
       skillsWanted:  skillsWanted  || [],
     });
 
-    // Auto-send verification OTP after signup
+    // Send OTP — log error but don't block
+    let otpSent = false;
     try {
       await generateAndSendOTP(email);
-    } catch (_) {
-      // Don't block signup if email fails
+      otpSent = true;
+      console.log(`✅ OTP sent to ${email}`);
+    } catch (emailErr) {
+      console.error(`❌ OTP email failed for ${email}:`, emailErr.message);
     }
 
     const token = generateToken(user._id);
 
     res.status(201).json({
       success: true,
-      message: "Account created! Please verify your email.",
+      message: otpSent
+        ? "Account created! OTP sent to your email."
+        : "Account created! (Email delivery failed — contact support)",
+      otpSent,
       token,
       user: {
         id: user._id, name: user.name, email: user.email,
@@ -217,32 +223,35 @@ const changePassword = async (req, res, next) => {
 
 /**
  * @route   POST /verify-email
- * @desc    Verify email OTP after signup
  */
 const verifyEmail = async (req, res, next) => {
   try {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).json({ success: false, message: "Email and OTP required." });
+    console.log(`🔍 Verifying OTP for ${email}`);
     await verifyOTP(email, otp);
     await User.findOneAndUpdate({ email }, { isEmailVerified: true });
+    console.log(`✅ Email verified for ${email}`);
     res.status(200).json({ success: true, message: "Email verified successfully!" });
   } catch (error) {
+    console.error(`❌ OTP verification failed:`, error.message);
     return res.status(400).json({ success: false, message: error.message });
   }
 };
 
 /**
  * @route   POST /send-otp
- * @desc    Resend OTP
  */
 const sendOTP = async (req, res, next) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ success: false, message: "Email required." });
     await generateAndSendOTP(email);
+    console.log(`📧 OTP resent to ${email}`);
     res.status(200).json({ success: true, message: "OTP sent!" });
   } catch (error) {
-    next(error);
+    console.error(`❌ Send OTP failed:`, error.message);
+    return res.status(500).json({ success: false, message: "Failed to send OTP. Try again." });
   }
 };
 
