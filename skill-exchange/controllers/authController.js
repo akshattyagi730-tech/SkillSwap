@@ -215,4 +215,35 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-module.exports = { signup, login, forgotPassword, resetPassword, changePassword };
+/**
+ * @route   POST /verify-email
+ * @desc    Verify email OTP after signup
+ */
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ success: false, message: "Email and OTP required." });
+    await verifyOTP(email, otp);
+    await User.findOneAndUpdate({ email }, { isEmailVerified: true });
+    res.status(200).json({ success: true, message: "Email verified successfully!" });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @route   POST /send-otp
+ * @desc    Resend OTP
+ */
+const sendOTP = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: "Email required." });
+    await generateAndSendOTP(email);
+    res.status(200).json({ success: true, message: "OTP sent!" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { signup, login, forgotPassword, resetPassword, changePassword, verifyEmail, sendOTP };
