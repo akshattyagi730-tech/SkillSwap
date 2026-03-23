@@ -1,9 +1,11 @@
 import axios from 'axios';
 
-// Auto-detect backend port — works with both 3000 and 5001
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
-const API = axios.create({ baseURL: BASE });
+const API = axios.create({
+  baseURL: BASE,
+  timeout: 60000, // 60 seconds — handles Render cold start
+});
 
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');

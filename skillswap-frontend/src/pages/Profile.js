@@ -81,13 +81,25 @@ const Profile = () => {
 
   const sendEmailOTP = async () => {
     setOtpLoading(true); setOtpMsg('');
-    try { await API.post('/auth/send-otp'); setOtpSent(true); setOtpMsg('OTP sent to your inbox!'); }
-    catch (err) { setOtpMsg(err.response?.data?.message || 'Failed.'); }
+    try {
+      await API.post('/send-otp', { email: user.email }, { timeout: 60000 });
+      setOtpSent(true);
+      setOtpMsg('✅ OTP sent to your email!');
+    }
+    catch (err) {
+      setOtpMsg(err.code === 'ECONNABORTED' ? 'Server is waking up, please try again in 30 seconds.' : (err.response?.data?.message || 'Failed to send OTP.'));
+    }
     finally { setOtpLoading(false); }
   };
+
   const verifyEmailOTP = async () => {
     setOtpLoading(true); setOtpMsg('');
-    try { const { data } = await API.post('/auth/verify-email', { otp }); updateUser(data.user); setOtpMsg('✅ Email verified!'); setOtpSent(false); setOtp(''); }
+    try {
+      await API.post('/verify-email', { email: user.email, otp }, { timeout: 60000 });
+      updateUser({ ...user, isEmailVerified: true });
+      setOtpMsg('✅ Email verified!');
+      setOtpSent(false); setOtp('');
+    }
     catch (err) { setOtpMsg(err.response?.data?.message || 'Invalid OTP.'); }
     finally { setOtpLoading(false); }
   };
