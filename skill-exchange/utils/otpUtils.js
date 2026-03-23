@@ -3,8 +3,19 @@ const nodemailer = require("nodemailer");
 const OTP        = require("../models/OTP");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+  tls: { rejectUnauthorized: false },
+  pool: true,
+  maxConnections: 3,
+  socketTimeout: 30000,
+  greetingTimeout: 30000,
+  connectionTimeout: 30000,
 });
 
 const generateAndSendOTP = async (email) => {

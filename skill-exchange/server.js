@@ -23,12 +23,12 @@ const skillTestRoutes    = require("./routes/skillTestRoutes");
 const app    = express();
 const server = http.createServer(app);
 
-// ── Socket.IO — allow all origins for dev ─────────────
+// ── Socket.IO ─────────────────────────────────────────
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL, 'http://localhost:3001'] : '*',
     methods: ["GET", "POST"],
-    credentials: false,
+    credentials: true,
   },
 });
 
@@ -115,8 +115,18 @@ app.set("onlineUsers", onlineUsers);
 
 connectDB();
 
-// ── CORS — allow all origins for dev ──────────────────
-app.use(cors({ origin: "*", credentials: false }));
+// ── CORS ──────────────────────────────────────────────
+const allowedOrigins = process.env.FRONTEND_URL
+  ? [process.env.FRONTEND_URL, 'http://localhost:3001', 'http://localhost:3000']
+  : ['*'];
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) cb(null, true);
+    else cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -144,6 +154,16 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`🔌 Socket.IO ready`);
+
+  // Keep Render free tier awake — ping every 14 minutes
+  if (process.env.RENDER_EXTERNAL_URL) {
+    setInterval(() => {
+      const url = process.env.RENDER_EXTERNAL_URL;
+      require('https').get(url, (res) => {
+        console.log(`🏓 Keep-alive ping: ${res.statusCode}`);
+      }).on('error', () => {});
+    }, 14 * 60 * 1000);
+  }
 });
 
 module.exports = { app, io };
